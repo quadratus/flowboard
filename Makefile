@@ -1,4 +1,4 @@
-.PHONY: up down reset test test-api logs
+.PHONY: up down reset test test-api e2e logs
 
 up: ## Build and start the full stack
 	docker compose up --build -d
@@ -13,6 +13,9 @@ test: test-api ## Run every test suite in Docker
 
 test-api: ## API integration tests against the compose Postgres
 	docker compose --profile test run --rm --build api-test
+
+e2e: up ## HTTP end-to-end flows against the running stack (through nginx)
+	docker compose --profile test run --rm --build -e E2E=1 -e E2E_BASE_URL=http://web api-test
 
 logs:
 	docker compose logs -f api

@@ -53,8 +53,16 @@ Every write runs in one transaction, then checks each container below the change
 ## Tests
 
 ```bash
-make test                      # API integration tests in Docker, against the compose Postgres
+make test                      # 92 API tests in Docker, against the compose Postgres
+make e2e                       # 14 HTTP flows against the running stack, through nginx
 ```
+
+The E2E flows (`apps/api/e2e/flow.test.ts`) create their own folder under Engineering, so they never depend on or change the demo data. They archive that folder at the end. They cover 4 user journeys:
+
+1. An admin gives two sibling lists different boards and adds a required field on their folder.
+2. A member creates a task, gets every missing field in one 400, moves the card on the board, and moves the task between lists under the move policy.
+3. A column with cards cannot be deleted without a remap, and after the remap every card sits in a valid column.
+4. A list that becomes private disappears from Bob's tree at once, and an explicit allow brings it back.
 
 The tests run against a separate `<db>_test` database, so they never change the demo data. Each test file resets that database to the seed.
 
