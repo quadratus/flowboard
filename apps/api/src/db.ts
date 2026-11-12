@@ -7,7 +7,9 @@ export function createDb(url = process.env.DATABASE_URL) {
     );
   }
   return postgres(url, {
-    transform: postgres.camel, // parent_id in SQL <-> parentId in JS
+    // Rename columns only (parent_id <-> parentId). postgres.camel also renames keys inside
+    // jsonb values, which would turn the field key "due_review" into "dueReview".
+    transform: { column: { from: postgres.toCamel, to: postgres.fromCamel } },
     onnotice: () => {}, // hide "already exists, skipping" notices
   });
 }

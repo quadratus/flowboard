@@ -170,6 +170,12 @@ catalogs:
     '@types/node':
       specifier: ^24
       version: 24.19.2
+    ajv:
+      specifier: ^8.20.0
+      version: 8.20.0
+    ajv-formats:
+      specifier: ^3.0.1
+      version: 3.0.1
     fastify-plugin:
       specifier: ^6.0.1
       version: 6.0.1
@@ -204,7 +210,13 @@ importers:
     dependencies:
       '@fastify/type-provider-typebox':
         specifier: 'catalog:'
-        version: 6.3.0(ajv-formats@3.0.1)(typebox@1.4.6)
+        version: 6.3.0(ajv-formats@3.0.1(ajv@8.20.0))(typebox@1.4.6)
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      ajv-formats:
+        specifier: 'catalog:'
+        version: 3.0.1(ajv@8.20.0)
       fastify:
         specifier: ^5.12.8
         version: 5.12.8
@@ -1531,7 +1543,7 @@ snapshots:
   '@fastify/ajv-compiler@4.0.7':
     dependencies:
       ajv: 8.20.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 4.2.3
 
   '@fastify/deepmerge@3.2.4': {}
@@ -1553,9 +1565,9 @@ snapshots:
       '@fastify/forwarded': 3.1.2
       ipaddr.js: 2.5.0
 
-  '@fastify/type-provider-typebox@6.3.0(ajv-formats@3.0.1)(typebox@1.4.6)':
+  '@fastify/type-provider-typebox@6.3.0(ajv-formats@3.0.1(ajv@8.20.0))(typebox@1.4.6)':
     dependencies:
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       typebox: 1.4.6
 
   '@jridgewell/resolve-uri@3.1.2': {}
@@ -1966,8 +1978,8 @@ snapshots:
 
   abstract-logging@2.0.1: {}
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv@8.20.0:
@@ -2024,7 +2036,7 @@ snapshots:
     dependencies:
       '@fastify/merge-json-schemas': 0.2.2
       ajv: 8.20.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 4.2.3
       json-schema-ref-resolver: 3.0.1
       rfdc: 1.4.1

@@ -58,14 +58,19 @@ make test                      # API integration tests in Docker, against the co
 
 The tests run against a separate `<db>_test` database, so they never change the demo data. Each test file resets that database to the seed.
 
-| Spec scenario                                    | Test                                |
-| ------------------------------------------------ | ----------------------------------- |
-| No identity → 401                                | `apps/api/test/permissions.test.ts` |
-| Tree hides private nodes for Bob; Alice sees all | `apps/api/test/permissions.test.ts` |
-| Private or denied container → 403                | `apps/api/test/permissions.test.ts` |
-| Hierarchy rules, reorder, move, archive          | `apps/api/test/hierarchy.test.ts`   |
+| Spec scenario (§8)                                                 | Test                                                |
+| ------------------------------------------------------------------ | --------------------------------------------------- |
+| Tree hides private nodes for Bob; Alice sees all                   | `permissions.test.ts` › tree visibility             |
+| Denied list → 403 on task read                                     | `tasks.test.ts` › permissions on tasks              |
+| No identity → 401                                                  | `permissions.test.ts` › auth boundary               |
+| Lists A and B under the same folder resolve different column sets  | `statuses.test.ts` › status resolution              |
+| Create/update task with unknown status → 400                       | `tasks.test.ts` › status validation                 |
+| Cross-list move into a list without the old status                 | `tasks.test.ts` › cross-list move                   |
+| Invalid field type / invalid select option → 400; valid payload ok | `tasks.test.ts` › custom fields, `validate.test.ts` |
+| Create without a required custom field → 400                       | `tasks.test.ts` › custom fields                     |
+| Delete or hide an in-use status → no orphan board state            | `tasks.test.ts` › config safety                     |
 
-Later phases add the status, custom-field and task scenarios to this table.
+All test files are in `apps/api/test/`. `validate.test.ts` is a pure unit test of the custom-field validator (one case per type rule). The other files are integration tests through `app.inject()` against Postgres.
 
 ## Run on the host
 
@@ -84,7 +89,7 @@ Prerequisite: Node 24 (see `.nvmrc`). Vite+ needs Node 22.18 or later.
 apps/api
   migrations/          numbered SQL files, applied in order (schema history)
   src/app.ts           buildApp(): the Fastify app, shared by server.ts and the tests
-  src/modules/         identity, permissions, hierarchy, statuses (fields, tasks next)
+  src/modules/         identity, permissions, hierarchy, statuses, fields, tasks
   src/shared/          error shape, fractional ordering, schema helpers
   test/                integration tests against a real Postgres
 apps/web               React 19 on Vite+

@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@fastify/type-provider-typebox": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
     "fastify": "^5.12.8",
     "fastify-plugin": "catalog:",
     "fractional-indexing": "catalog:",

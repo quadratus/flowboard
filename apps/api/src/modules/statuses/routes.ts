@@ -4,6 +4,7 @@ import { AppError, conflict, invalid, notFound } from "../../shared/errors.ts";
 import { placeAmong, type Anchor, type Sibling } from "../../shared/position.ts";
 import { AnchorProps, IdParams } from "../../shared/schema.ts";
 import { requireAccess, requireAdmin } from "../permissions/access.ts";
+import { lockConfig } from "../../shared/locks.ts";
 
 const Key = Type.String({ pattern: "^[a-z][a-z0-9_]{0,39}$" });
 const Name = Type.String({ minLength: 1, maxLength: 50 });
@@ -33,12 +34,33 @@ export const resolvedStatuses = (sql: Queryable, containerId: string) =>
 const toApi = ({ depth, ...s }: ResolvedStatus) => ({ ...s, inherited: depth > 0 });
 
 /**
- * Serializes all config writes, so two admins cannot each pass a check that their combined
- * changes break. Config writes are rare, so one lock for the workspace costs little.
+ * Config safety (spec §3): a removal (delete or hide) can leave tasks on a status that their list
+ * no longer has. Without remapTo → 409 STATUS_IN_USE and the write rolls back.
+ * With remapTo → those tasks move to that key, which must exist in each of their lists.
  */
-async function lockConfig(tx: Tx) {
-  await tx`select id from containers where type = 'workspace' for update`;
+async function resolveOrphans(tx: Tx, ownerId: string, remapTo: string | undefined) {
+  const orphans = await tx<{ taskId: string; listId: string; statusKey: string }[]>`
+    select * from orphan_tasks(${ownerId})`;
+  if (orphans.length === 0) return;
+  if (!remapTo) {
+    throw conflict(
+      "STATUS_IN_USE",
+      `${orphans.length} task(s) use this status. Send ?remapTo=<statusKey> to move them first.`,
+      { taskCount: orphans.length, statusKeys: [...new Set(orphans.map((o) => o.statusKey))] },
+    );
+  }
+  await tx`
+    update tasks set status_key = ${remapTo}, updated_at = now()
+    where id in ${tx(orphans.map((o) => o.taskId))}`;
+  const left = await tx`select 1 from orphan_tasks(${ownerId}) limit 1`;
+  if (left.length > 0) {
+    throw invalid([
+      { path: "query.remapTo", issue: `'${remapTo}' is not a status in every affected list` },
+    ]);
+  }
 }
+
+const RemapQuery = Type.Object({ remapTo: Type.Optional(Key) }, { additionalProperties: false });
 
 /** Rolls the transaction back (by throwing) when a write leaves any set below `ownerId` incomplete. */
 async function assertCompleteSets(tx: Tx, ownerId: string) {
@@ -104,6 +126,7 @@ export const statuses: FastifyPluginAsyncTypebox = async (app) => {
     {
       schema: {
         params: IdParams,
+        querystring: RemapQuery,
         body: Type.Union([
           Type.Object({ key: Key, hidden: Type.Literal(true) }, { additionalProperties: false }),
           Type.Object(
@@ -161,7 +184,9 @@ export const statuses: FastifyPluginAsyncTypebox = async (app) => {
             values (${ownerId}, ${body.key}, ${body.name}, ${body.category}, ${body.color}, ${position})
             returning id, key, hidden, name, category, color, position`;
         }
+        // Config errors (400) come before in-use conflicts (409): a broken set is never valid.
         await assertCompleteSets(tx, ownerId);
+        if ("hidden" in body) await resolveOrphans(tx, ownerId, req.query.remapTo);
         return row;
       });
       return reply.code(201).send(created);
@@ -227,18 +252,22 @@ export const statuses: FastifyPluginAsyncTypebox = async (app) => {
   /**
    * Deletes one row on one level. The effect depends on the row:
    *   override → the inherited version comes back; hide row → the key shows again;
-   *   new status → the key disappears from this subtree.
-   * shortcut: no in-use check yet; phase 3 adds 409 STATUS_IN_USE and ?remapTo when tasks exist.
+   *   new status → the key disappears from this subtree, so tasks on it need ?remapTo (else 409).
    */
-  app.delete("/v1/statuses/:id", { schema: { params: IdParams } }, async (req, reply) => {
-    requireAdmin(req);
-    await sql.begin(async (tx) => {
-      await lockConfig(tx);
-      const [row] = await tx<{ ownerId: string }[]>`
+  app.delete(
+    "/v1/statuses/:id",
+    { schema: { params: IdParams, querystring: RemapQuery } },
+    async (req, reply) => {
+      requireAdmin(req);
+      await sql.begin(async (tx) => {
+        await lockConfig(tx);
+        const [row] = await tx<{ ownerId: string }[]>`
         delete from statuses where id = ${req.params.id} returning owner_id`;
-      if (!row) throw notFound("Status");
-      await assertCompleteSets(tx, row.ownerId);
-    });
-    return reply.code(204).send();
-  });
+        if (!row) throw notFound("Status");
+        await assertCompleteSets(tx, row.ownerId);
+        await resolveOrphans(tx, row.ownerId, req.query.remapTo);
+      });
+      return reply.code(204).send();
+    },
+  );
 };
