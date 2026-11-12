@@ -40,5 +40,18 @@ services:
     depends_on:
       - api
 
+  # Runs only with `--profile test` (see Makefile). Uses <db>_test, so dev data stays.
+  api-test:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-flowboard}:${POSTGRES_PASSWORD:-flowboard}@db:5432/${POSTGRES_DB:-flowboard}
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db-data:

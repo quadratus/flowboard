@@ -75,7 +75,7 @@ describe("reorder and move", () => {
 
   it("rejects a move to a parent of the wrong type", async () => {
     const res = await call(app, "alice", "POST", `/v1/containers/${ids.Backlog}/move`, {
-      parentId: ids.Workspace ?? ids.Flowboard,
+      parentId: ids.Flowboard,
     });
     expect(res.status).toBe(400);
   });
