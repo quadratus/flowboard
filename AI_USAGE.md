@@ -25,4 +25,5 @@ Tools: Claude (Opus) in the pi coding agent, Claude Code. I used them for design
 
 ## AI-generated tests I had to fix
 
-See the `ids.Workspace` row above. More entries follow as later phases add tests.
+1. Phase 1: the `ids.Workspace ?? ids.Flowboard` test (see above).
+2. Phase 2: the status test that deleted its own seed row (see above). Two tests failed with 201, and the first guess was a bug in the category check. A direct query in `psql` showed the SQL was correct and the test state was wrong.

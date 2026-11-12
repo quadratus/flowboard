@@ -5,6 +5,7 @@ import { registerErrorHandling } from "./shared/errors.ts";
 import { identity } from "./modules/identity/routes.ts";
 import { permissions } from "./modules/permissions/routes.ts";
 import { hierarchy } from "./modules/hierarchy/routes.ts";
+import { statuses } from "./modules/statuses/routes.ts";
 
 export type AppOptions = { sql: Sql; logger?: boolean };
 
@@ -32,6 +33,7 @@ export function buildApp({ sql, logger = false }: AppOptions) {
   app.register(identity);
   app.register(permissions);
   app.register(hierarchy);
+  app.register(statuses);
 
   return app;
 }

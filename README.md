@@ -36,6 +36,20 @@ Every `/v1` request except `/v1/health` needs the `X-User-Id` header. Without it
 curl -s localhost:8080/v1/tree -H 'X-User-Id: bob'
 ```
 
+## Status inheritance (short version)
+
+Statuses use **merge by key**. Each level (workspace, space, folder, list) can add a key, override an inherited key, or hide it. For each key, the row from the nearest level wins, and then hidden keys drop out. Full algorithm: `resolved_statuses()` in `apps/api/migrations/002_statuses.sql`.
+
+| Seed level        | Change                    | Backlog (List A)              | Sprint (List B)                                     |
+| ----------------- | ------------------------- | ----------------------------- | --------------------------------------------------- |
+| Workspace         | To do, In progress, Done  |                               |                                                     |
+| Space Engineering | add In review             |                               |                                                     |
+| Folder Q2 Launch  | override done → "Shipped" |                               |                                                     |
+| List              |                           | hide In review                | add Blocked                                         |
+| **Board columns** |                           | To do · In progress · Shipped | To do · In progress · In review · Blocked · Shipped |
+
+Every write runs in one transaction, then checks each container below the changed level. If any resolved set lacks a `not_started`, an `active` or a `done` status, the write rolls back with 400 `STATUS_SET_INCOMPLETE`, and `details` names the broken containers.
+
 ## Tests
 
 ```bash
@@ -70,7 +84,7 @@ Prerequisite: Node 24 (see `.nvmrc`). Vite+ needs Node 22.18 or later.
 apps/api
   migrations/          numbered SQL files, applied in order (schema history)
   src/app.ts           buildApp(): the Fastify app, shared by server.ts and the tests
-  src/modules/         identity, permissions, hierarchy (statuses, fields, tasks next)
+  src/modules/         identity, permissions, hierarchy, statuses (fields, tasks next)
   src/shared/          error shape, fractional ordering, schema helpers
   test/                integration tests against a real Postgres
 apps/web               React 19 on Vite+
