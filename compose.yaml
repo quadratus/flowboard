@@ -53,5 +53,16 @@ services:
       db:
         condition: service_healthy
 
+  # Browser tests (Playwright) against the web service. Runs only with `--profile test`.
+  web-e2e:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: e2e-web/Dockerfile
+    environment:
+      E2E_BASE_URL: http://web
+    depends_on:
+      - web
+
 volumes:
   db-data:

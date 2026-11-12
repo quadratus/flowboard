@@ -31,3 +31,5 @@ dist-ssr
 
 # AI agent worktrees
 .claude/worktrees/
+test-results/
+playwright-report/

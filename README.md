@@ -53,8 +53,10 @@ Every write runs in one transaction, then checks each container below the change
 ## Tests
 
 ```bash
-make test                      # 92 API tests in Docker, against the compose Postgres
+make test                      # every suite below, in Docker (about 3 minutes on first build)
+make test-api                  # 92 API tests against the compose Postgres
 make e2e                       # 14 HTTP flows against the running stack, through nginx
+make e2e-web                   # 2 browser tests (Playwright) against the running stack
 ```
 
 The E2E flows (`apps/api/e2e/flow.test.ts`) create their own folder under Engineering, so they never depend on or change the demo data. They archive that folder at the end. They cover 4 user journeys:
@@ -63,6 +65,11 @@ The E2E flows (`apps/api/e2e/flow.test.ts`) create their own folder under Engine
 2. A member creates a task, gets every missing field in one 400, moves the card on the board, and moves the task between lists under the move policy.
 3. A column with cards cannot be deleted without a remap, and after the remap every card sits in a valid column.
 4. A list that becomes private disappears from Bob's tree at once, and an explicit allow brings it back.
+
+The browser tests (`e2e-web/flow.spec.ts`) cover the spec §8 frontend path and the bonus:
+
+1. Select Backlog and then Sprint and see their different columns, open a card, clear a required field (inline error), set a new value, save, reload and see the value.
+2. Switch from Alice to Bob: Leadership, Pipeline and the denied Sprint list leave the sidebar, and a direct link to a hidden list shows the 403 message.
 
 The tests run against a separate `<db>_test` database, so they never change the demo data. Each test file resets that database to the seed.
 
@@ -100,7 +107,8 @@ apps/api
   src/modules/         identity, permissions, hierarchy, statuses, fields, tasks
   src/shared/          error shape, fractional ordering, schema helpers
   test/                integration tests against a real Postgres
-apps/web               React 19 on Vite+
+apps/web               React 19 on Vite+: TanStack Query, dnd-kit, React Router (design notes: docs/DESIGN.md)
+e2e-web/               Playwright browser tests
 ```
 
 - Node 24 runs the api TypeScript source directly with type stripping. There is no build step. `tsc` (TypeScript 7) only type-checks.

@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
-    "dev": "vp run -r --parallel dev"
+    "dev": "vp run -r --parallel dev",
+    "e2e:web": "playwright test -c e2e-web/playwright.config.ts"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "vite-plus": "catalog:"
   },
   "devEngines": {

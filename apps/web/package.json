@@ -10,8 +10,15 @@
     "preview": "vp preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
+    "@fontsource-variable/bricolage-grotesque": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "fractional-indexing": "catalog:",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-router": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
