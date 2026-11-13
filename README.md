@@ -56,7 +56,7 @@ Every write runs in one transaction, then checks each container below the change
 make test                      # every suite below, in Docker (about 3 minutes on first build)
 make test-api                  # 92 API tests against the compose Postgres
 make e2e                       # 14 HTTP flows against the running stack, through nginx
-make e2e-web                   # 2 browser tests (Playwright) against the running stack
+make e2e-web                   # 3 browser tests (Playwright) against the running stack
 ```
 
 The E2E flows (`apps/api/e2e/flow.test.ts`) create their own folder under Engineering, so they never depend on or change the demo data. They archive that folder at the end. They cover 4 user journeys:
@@ -70,6 +70,7 @@ The browser tests (`e2e-web/flow.spec.ts`) cover the spec §8 frontend path and 
 
 1. Select Backlog and then Sprint and see their different columns, open a card, clear a required field (inline error), set a new value, save, reload and see the value.
 2. Switch from Alice to Bob: Leadership, Pipeline and the denied Sprint list leave the sidebar, and a direct link to a hidden list shows the 403 message.
+3. Move a card to the next column with the keyboard only (Space, arrow, Space), and back.
 
 The tests run against a separate `<db>_test` database, so they never change the demo data. Each test file resets that database to the seed.
 

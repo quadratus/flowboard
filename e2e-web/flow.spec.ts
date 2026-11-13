@@ -78,3 +78,32 @@ test("a private list disappears when the user switches from Alice to Bob", async
   await page.goto(url);
   await expect(page.getByRole("alert")).toContainText("You do not have access");
 });
+
+test("a card moves to the next column with the keyboard only", async ({ page }) => {
+  await actAs(page, "alice");
+  await page.getByRole("link", { name: "Backlog" }).click();
+  const title = "Rate-limit the public API"; // seed: Backlog, To do
+  const slot = () => page.locator(".card-slot").filter({ hasText: title }).first();
+  const announcer = page.locator("[id^=DndLiveRegion]");
+
+  // A real keyboard user waits for each step; the sensor listens for arrows only after pickup.
+  async function moveOneColumn(key: "ArrowRight" | "ArrowLeft", column: string) {
+    await slot().focus();
+    await page.keyboard.press("Space");
+    await expect(announcer).toContainText(`${title} is over`);
+    await page.keyboard.press(key);
+    await expect(announcer).toContainText(`is over ${column}`);
+    await page.keyboard.press("Space");
+    await expect(announcer).toContainText(`Dropped ${title} in ${column}`);
+  }
+
+  await expect(page.getByTestId("column-todo")).toContainText(title);
+  await moveOneColumn("ArrowRight", "In progress");
+  await expect(page.getByTestId("column-in_progress")).toContainText(title);
+  await page.reload(); // the server stored the move
+  await expect(page.getByTestId("column-in_progress")).toContainText(title);
+
+  // Put it back, so the other tests see the seed state.
+  await moveOneColumn("ArrowLeft", "To do");
+  await expect(page.getByTestId("column-todo")).toContainText(title);
+});

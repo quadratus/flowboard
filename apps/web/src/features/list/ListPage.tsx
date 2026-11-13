@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, NavLink, useParams, useSearchParams } from "react-router";
 import { useFields, useMe, useStatuses, useTasks, useTree, useUsers } from "../../api/queries.ts";
 import { pathTo } from "../../lib/tree.ts";
@@ -11,6 +12,7 @@ export function ListPage() {
   const { listId = "", view = "board" } = useParams();
   const [params, setParams] = useSearchParams();
   const taskId = params.get("task");
+  const [creating, setCreating] = useState(false);
 
   const tree = useTree();
   const me = useMe();
@@ -58,16 +60,27 @@ export function ListPage() {
               Statuses and fields
             </Link>
           ) : null}
-          {statuses.data && fields.data ? (
-            <NewTask
-              listId={listId}
-              statuses={statuses.data}
-              fields={fields.data}
-              onCreated={openTask}
-            />
-          ) : null}
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setCreating(true)}
+            disabled={creating || !statuses.data || !fields.data}
+          >
+            New task
+          </button>
         </div>
       </header>
+
+      {creating && statuses.data && fields.data ? (
+        <NewTask
+          key={listId}
+          listId={listId}
+          statuses={statuses.data}
+          fields={fields.data}
+          onCreated={openTask}
+          onClose={() => setCreating(false)}
+        />
+      ) : null}
 
       {error ? (
         <ErrorNote error={error} />

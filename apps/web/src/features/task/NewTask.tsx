@@ -1,49 +1,53 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client.ts";
 import { useCreateTask } from "../../api/queries.ts";
-import type { Field, FieldValue, Status } from "../../api/types.ts";
+import type { Field, FieldValue, Issue, Status } from "../../api/types.ts";
 import { ErrorNote } from "../../ui/ErrorNote.tsx";
 import { FieldInput } from "./FieldInput.tsx";
 
-/** Quick create: title, column and the required fields only. The drawer opens after for the rest. */
+/**
+ * Quick create: title, column and the required fields only. The drawer opens after for the rest.
+ * The form checks the title and required fields first, so one submit shows every missing value.
+ * (The API stops at its body schema, so an empty title would hide the custom-field errors.)
+ */
 export function NewTask({
   listId,
   statuses,
   fields,
   onCreated,
+  onClose,
 }: {
   listId: string;
   statuses: Status[];
   fields: Field[];
   onCreated: (id: string) => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [statusKey, setStatusKey] = useState(statuses[0]?.key ?? "");
   const [values, setValues] = useState<Record<string, FieldValue | null>>({});
+  const [local, setLocal] = useState<Issue[]>([]);
   const create = useCreateTask(listId);
-  const issues = create.error instanceof ApiError ? create.error.issues : [];
   const required = fields.filter((f) => f.required);
-
-  if (!open) {
-    return (
-      <button type="button" className="primary-button" onClick={() => setOpen(true)}>
-        New task
-      </button>
-    );
-  }
+  const issues = local.length ? local : create.error instanceof ApiError ? create.error.issues : [];
+  const issueFor = (path: string) => issues.find((i) => i.path === path)?.issue;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const customFields = Object.fromEntries(Object.entries(values).filter(([, v]) => v !== null));
+    const missing: Issue[] = [
+      ...(title.trim() ? [] : [{ path: "title", issue: "Give the task a title." }]),
+      ...required
+        .filter((f) => customFields[f.key] === undefined)
+        .map((f) => ({ path: `customFields.${f.key}`, issue: "is required" })),
+    ];
+    setLocal(missing);
+    if (missing.length) return;
     create.mutate(
       { title, statusKey, customFields },
       {
         onSuccess: (task) => {
-          setOpen(false);
-          setTitle("");
-          setValues({});
-          create.reset();
+          onClose();
           onCreated(task.id);
         },
       },
@@ -85,7 +89,7 @@ export function NewTask({
           field={f}
           value={values[f.key] ?? undefined}
           onChange={(v) => setValues({ ...values, [f.key]: v })}
-          error={issues.find((i) => i.path === `customFields.${f.key}`)?.issue}
+          error={issueFor(`customFields.${f.key}`)}
         />
       ))}
       {create.error && issues.length === 0 ? <ErrorNote error={create.error} /> : null}
@@ -93,7 +97,7 @@ export function NewTask({
         <button type="submit" className="primary-button" disabled={create.isPending}>
           {create.isPending ? "Creating…" : "Create task"}
         </button>
-        <button type="button" className="ghost-button" onClick={() => setOpen(false)}>
+        <button type="button" className="ghost-button" onClick={onClose}>
           Cancel
         </button>
       </div>

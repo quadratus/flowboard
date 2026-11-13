@@ -362,7 +362,8 @@ textarea {
 .card.is-lifted {
   border-color: var(--amber);
   box-shadow: 0 10px 24px -8px rgb(31 42 46 / 0.35);
-  transform: rotate(-1.2deg);
+  /* No tilt: a rotated overlay has a wider box, and the keyboard sensor then treats cards in
+     the same column as "to the right", so ArrowRight would not leave the column. */
   cursor: grabbing;
 }
 .card-title {
@@ -792,13 +793,25 @@ textarea {
 /* ---------- new task ---------- */
 .new-task {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 24px;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
+}
+
+.new-task .field {
+  min-width: 180px;
+}
+.new-task .field:first-child {
+  flex: 1 1 280px;
+}
+.new-task .row-actions {
+  align-self: flex-start;
+  margin-top: 25px; /* line up with the inputs, below the labels */
 }
 
 /* ---------- settings ---------- */

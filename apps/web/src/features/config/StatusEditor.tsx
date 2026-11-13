@@ -318,5 +318,14 @@ export function ConfigError({ error }: { error: unknown }) {
       </div>
     );
   }
+  if (error instanceof ApiError && error.code === "FIELD_KEY_COLLISION") {
+    const d = error.details as { ownerName: string };
+    return (
+      <div className="error-note error-note-light" role="alert">
+        <strong>A field with this name already exists on {d.ownerName}.</strong>
+        <p>Lists below it already get that field. Choose another name.</p>
+      </div>
+    );
+  }
   return <ErrorNote error={error} />;
 }

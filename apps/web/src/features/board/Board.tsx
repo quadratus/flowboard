@@ -9,6 +9,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -50,7 +51,7 @@ export function Board({ listId, tasks, statuses, fields, users, tree, onOpen }: 
   const [dragging, setDragging] = useState<Task | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), // a click still opens the card
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: (event, args) => keyboardTarget(event, args) }),
   );
 
   const columns = statuses.map((s) => ({
@@ -58,6 +59,69 @@ export function Board({ listId, tasks, statuses, fields, users, tree, onOpen }: 
     cards: tasks.filter((t) => t.statusKey === s.key).sort(byPosition),
   }));
   const badgeField = fields.find((f) => f.type === "single_select");
+
+  /**
+   * Left and right jump to the next column (its first card, or its empty area). The sortable
+   * default compares box edges, and each column's drop area starts 2px left of its cards, so
+   * "left" kept finding the current column. Up and down keep the sortable default.
+   */
+  const keyboardTarget: KeyboardCoordinateGetter = (event, args) => {
+    if (event.code !== "ArrowLeft" && event.code !== "ArrowRight") {
+      return sortableKeyboardCoordinates(event, args);
+    }
+    event.preventDefault();
+    const { active, over, droppableRects } = args.context;
+    const overId = String(over?.id ?? active?.id ?? "");
+    const currentKey = tasks.find((t) => t.id === overId)?.statusKey ?? overId.replace(/^col:/, "");
+    const next =
+      columns[
+        columns.findIndex((c) => c.status.key === currentKey) +
+          (event.code === "ArrowRight" ? 1 : -1)
+      ];
+    if (!next) return undefined;
+    const firstCard = next.cards.find((t) => t.id !== active?.id);
+    const rect = droppableRects.get(firstCard?.id ?? `col:${next.status.key}`);
+    return rect ? { x: rect.left, y: rect.top } : undefined;
+  };
+
+  // Screen-reader messages in words: dnd-kit's defaults read the raw task and column ids.
+  const title = (id: string | number) => tasks.find((t) => t.id === id)?.title ?? "the card";
+  const place = (id: string | number | undefined) => {
+    if (id === undefined) return "no column";
+    const card = tasks.find((t) => t.id === id);
+    const key = card?.statusKey ?? String(id).replace(/^col:/, "");
+    const column = statuses.find((s) => s.key === key)?.name ?? key;
+    return card ? `${column}, at ${card.title}` : column;
+  };
+  const accessibility = {
+    screenReaderInstructions: {
+      draggable:
+        "Press space to pick up the card. Use the arrow keys to move it, space to drop it, and escape to cancel. Press enter to open it.",
+    },
+    announcements: {
+      onDragStart: ({ active }: { active: { id: string | number } }) =>
+        `Picked up ${title(active.id)}.`,
+      onDragOver: ({
+        active,
+        over,
+      }: {
+        active: { id: string | number };
+        over: { id: string | number } | null;
+      }) => `${title(active.id)} is over ${place(over?.id)}.`,
+      onDragEnd: ({
+        active,
+        over,
+      }: {
+        active: { id: string | number };
+        over: { id: string | number } | null;
+      }) =>
+        over
+          ? `Dropped ${title(active.id)} in ${place(over.id)}.`
+          : `${title(active.id)} returned to its place.`,
+      onDragCancel: ({ active }: { active: { id: string | number } }) =>
+        `Move cancelled. ${title(active.id)} returned to its place.`,
+    },
+  };
 
   function onDragStart(e: DragStartEvent) {
     setDragging(tasks.find((t) => t.id === e.active.id) ?? null);
@@ -113,6 +177,7 @@ export function Board({ listId, tasks, statuses, fields, users, tree, onOpen }: 
     <>
       {update.error ? <ErrorNote error={update.error} /> : null}
       <DndContext
+        accessibility={accessibility}
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={onDragStart}
@@ -212,7 +277,7 @@ function SortableCard({
         listeners?.onKeyDown?.(e);
         if (e.key === "Enter" && !e.defaultPrevented) onOpen(task.id);
       }}
-      aria-roledescription="Draggable card. Press space to pick up, Enter to open."
+      aria-roledescription="draggable card"
     >
       <Card task={task} users={users} badgeField={badgeField} />
     </div>
