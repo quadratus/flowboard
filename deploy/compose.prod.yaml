@@ -1,0 +1,70 @@
+# Production stack for one shared server. Run it from the repo root:
+#   docker compose -p flowboard -f deploy/compose.prod.yaml --env-file deploy/.env up -d --build
+#
+# Differences from the local compose.yaml:
+# - Only nginx publishes a port, and only on 127.0.0.1. A tunnel (Tailscale Funnel) exposes it.
+#   The API and Postgres publish no ports, so nothing else on the server can bypass the barrier.
+# - The barrier password and the database password come from deploy/.env (not in git).
+# - Each container has a memory limit, so Flowboard cannot starve other apps on the server.
+name: flowboard
+
+x-common: &common
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  db:
+    <<: *common
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: flowboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: flowboard
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowboard -d flowboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+
+  api:
+    <<: *common
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    init: true
+    environment:
+      DATABASE_URL: postgres://flowboard:${POSTGRES_PASSWORD}@db:5432/flowboard
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 256m
+
+  web:
+    <<: *common
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?set BASIC_AUTH_USER in deploy/.env}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:?set BASIC_AUTH_PASSWORD in deploy/.env}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8090}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      - api
+    mem_limit: 64m
+
+volumes:
+  db-data:

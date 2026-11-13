@@ -10,4 +10,5 @@ RUN pnpm --filter web build
 
 FROM nginx:1.29-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=755 apps/web/40-basic-auth.sh /docker-entrypoint.d/40-basic-auth.sh
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
