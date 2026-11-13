@@ -11,6 +11,15 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:8080",
+    // For a deployed stack behind the password barrier (deploy/README.md).
+    ...(process.env.E2E_BASIC_AUTH
+      ? {
+          httpCredentials: {
+            username: process.env.E2E_BASIC_AUTH.split(":")[0],
+            password: process.env.E2E_BASIC_AUTH.split(":").slice(1).join(":"),
+          },
+        }
+      : {}),
     trace: "retain-on-failure",
     viewport: { width: 1440, height: 900 },
   },

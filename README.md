@@ -14,6 +14,8 @@ Flowboard is a small project-management app for one team. Work sits in a tree of
 | 8. AI usage              | [8. AI usage](#8-ai-usage)                                   |
 | §8 Tests                 | [Tests](#tests)                                              |
 
+**Live demo:** https://ubuntu-4gb-fsn1-2.tail349835.ts.net. A password barrier protects it. Ask me for the password. Deploy notes: [`deploy/README.md`](deploy/README.md).
+
 Other documents: [`docs/PLAN.md`](docs/PLAN.md) (build plan and decisions), [`docs/DESIGN.md`](docs/DESIGN.md) (UI design), [`AI_USAGE.md`](AI_USAGE.md).
 
 ## 1. Run
@@ -471,8 +473,9 @@ The async path is a **transactional outbox** in Postgres. It needs no new infras
 
 ### Stretch goals
 
-The spec allows two. I attempted one:
+The spec allows two. I attempted these:
 
+- **Deploy the compose stack**: done, on a VPS behind Tailscale Funnel and a password barrier, not on Fly.io, Railway or Render. [`deploy/README.md`](deploy/README.md) explains why: the server opens no inbound port, and the API and database stay private.
 - **Filter by custom field values**: partial. The API supports `?fieldKey=&fieldValue=`, and the table view has a filter. The board has no filter yet.
 
 ## 8. AI usage

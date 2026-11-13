@@ -82,6 +82,7 @@ test("a private list disappears when the user switches from Alice to Bob", async
 test("a card moves to the next column with the keyboard only", async ({ page }) => {
   await actAs(page, "alice");
   await page.getByRole("link", { name: "Backlog" }).click();
+  await page.waitForLoadState("networkidle"); // no refetch may land during the drag
   const title = "Rate-limit the public API"; // seed: Backlog, To do
   const slot = () => page.locator(".card-slot").filter({ hasText: title }).first();
   const announcer = page.locator("[id^=DndLiveRegion]");
@@ -91,6 +92,10 @@ test("a card moves to the next column with the keyboard only", async ({ page }) 
     await slot().focus();
     await page.keyboard.press("Space");
     await expect(announcer).toContainText(`${title} is over`);
+    // dnd-kit adds its arrow-key listener in a setTimeout(0) after the pickup. Timers run in
+    // order, so once our own setTimeout(0) has run, the listener exists. Without this wait the
+    // test is flaky on a slow network, where responses delay that timer.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
     await page.keyboard.press(key);
     await expect(announcer).toContainText(`is over ${column}`);
     await page.keyboard.press("Space");
